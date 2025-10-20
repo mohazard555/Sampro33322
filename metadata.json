@@ -1,0 +1,5 @@
+{
+  "name": "SAM PRO",
+  "description": "An interactive web application to display and manage an inventory of items. Users can browse a gallery, filter by various criteria, upload new items, and view details in an elegant interface.",
+  "requestFramePermissions": []
+}

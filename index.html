@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAM PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Using a modern, highly readable sans-serif for body and a classic serif for headings */
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, h4, h5, h6, .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+      @media print {
+        body > #root > div > *:not(.printable-modal) {
+          display: none;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .printable-modal {
+          position: static !important;
+          display: block !important;
+          background: none !important;
+          backdrop-filter: none !important;
+          overflow: visible !important;
+          height: auto !important;
+          padding: 0 !important;
+          justify-content: flex-start;
+          align-items: flex-start;
+        }
+        .printable-content {
+          border: 1px solid #ccc !important;
+          box-shadow: none !important;
+          max-height: none !important;
+          overflow: visible !important;
+          background: white !important;
+          color: black !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        .printable-content * {
+          color: black !important;
+        }
+        .printable-content h2 { font-size: 24pt !important; }
+        .printable-content p, .printable-content span, .printable-content div { font-size: 12pt !important; }
+        .printable-content .text-amber-400 { color: #8f5c00 !important; }
+        .printable-content .bg-zinc-700 { background-color: #eee !important; color: black !important; border-radius: 4px; padding: 2px 6px; }
+        .printable-content img {
+          width: 100% !important;
+          max-width: 300px !important;
+          height: auto !important;
+          border-radius: 0 !important;
+          object-fit: contain;
+          margin-bottom: 20px;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-zinc-900">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
