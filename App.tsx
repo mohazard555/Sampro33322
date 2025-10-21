@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Item, Filters, UniqueData, AppSettings, User, ItemType } from './types';
-import { INITIAL_ITEMS } from './constants';
+import type { Item, Filters, UniqueData, AppSettings, User, ItemType, BackupData } from './types';
+import { masterData } from './masterData';
 import Header from './components/Header';
 import HatForm from './components/HatForm';
 import FilterControls from './components/FilterControls';
@@ -11,22 +11,21 @@ import ItemsSidebar from './components/ItemsSidebar';
 import Login from './components/Login';
 import { PlusIcon } from './components/Icons';
 
-const EMPTY_QUICK_ENTRY_DATA: UniqueData = {
-  models: [],
-  barcodes: [],
-  colors: [],
-  materials: [],
-  prices: [],
-  types: [],
-  categories: [],
-  sizes: [],
-  countries: [],
+// Helper function to initialize state from localStorage, with a fallback to masterData
+const initializeState = <T,>(key: string, masterValue: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    // If there is saved data, use it.
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error(`Failed to parse ${key} from localStorage`, error);
+  }
+  // Otherwise, use the master value from masterData.ts
+  return masterValue;
 };
 
-const DEFAULT_SETTINGS: AppSettings = {
-    companyName: 'SAM PRO',
-    companyInfo: '',
-};
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(() => {
@@ -63,25 +62,17 @@ const App: React.FC = () => {
     }
   });
 
-  const [items, setItems] = useState<Item[]>(() => {
-    try {
-      const savedItems = localStorage.getItem('samProItems');
-      return savedItems ? JSON.parse(savedItems) : INITIAL_ITEMS;
-    } catch (error) {
-      console.error("Failed to parse items from localStorage", error);
-      return INITIAL_ITEMS;
-    }
-  });
-
+  // Items are now initialized empty and loaded via useEffect based on user type.
+  const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isFormVisible, setIsFormVisible] = useState<boolean>(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState<boolean>(false);
   const [isItemsSidebarVisible, setIsItemsSidebarVisible] = useState<boolean>(false);
   
-  const [companyLogo, setCompanyLogo] = useState<string | null>(() => {
-    return localStorage.getItem('samProLogo');
-  });
+  const [companyLogo, setCompanyLogo] = useState<string | null>(() => 
+    initializeState('samProLogo', masterData.companyLogo)
+  );
 
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
@@ -94,36 +85,60 @@ const App: React.FC = () => {
     material: '',
   });
   
-  const [quickEntryData, setQuickEntryData] = useState<UniqueData>(() => {
-    try {
-      const savedData = localStorage.getItem('samProQuickEntry');
-      return savedData ? JSON.parse(savedData) : EMPTY_QUICK_ENTRY_DATA;
-    } catch (error) {
-      console.error("Failed to initialize quick entry data", error);
-      return EMPTY_QUICK_ENTRY_DATA;
-    }
-  });
+  const [quickEntryData, setQuickEntryData] = useState<UniqueData>(() =>
+    initializeState('samProQuickEntry', masterData.quickEntryData)
+  );
 
   const [settings, setSettings] = useState<AppSettings>(() => {
-      try {
-          const savedSettings = localStorage.getItem('samProSettings');
-          return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
-      } catch (error) {
-          console.error("Failed to parse settings from localStorage", error);
-          return DEFAULT_SETTINGS;
+    const masterSettings = masterData.settings;
+    try {
+      const saved = localStorage.getItem('samProSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Deep merge to ensure new properties from masterData are included
+        return {
+          ...masterSettings,
+          ...parsed,
+          guestCredentials: {
+            ...masterSettings.guestCredentials,
+            ...(parsed.guestCredentials || {}),
+          },
+        };
       }
+    } catch (error) {
+      console.error(`Failed to parse settings from localStorage`, error);
+    }
+    return masterSettings;
   });
   
+  // This effect handles loading the correct item data based on the current user.
   useEffect(() => {
-    localStorage.setItem('samProItems', JSON.stringify(items));
-  }, [items]);
+    if (currentUser) {
+      // If the user is a guest, they always see the published masterData.
+      if (currentUser.id === 'guest-user') {
+        setItems(masterData.items);
+      } else {
+        // Admins and other registered users load their own data from localStorage.
+        setItems(initializeState('samProItems', masterData.items));
+      }
+    } else {
+      // When no user is logged in (e.g., at the login screen), clear items.
+      setItems([]);
+    }
+  }, [currentUser]);
+
+
+  // This effect saves items to localStorage only when they change and the user is not a guest.
+  useEffect(() => {
+    if (currentUser && currentUser.id !== 'guest-user') {
+      localStorage.setItem('samProItems', JSON.stringify(items));
+    }
+  }, [items, currentUser]);
+
 
   useEffect(() => {
-    if (companyLogo) {
-      localStorage.setItem('samProLogo', companyLogo);
-    } else {
-      localStorage.removeItem('samProLogo');
-    }
+    // Use JSON.stringify to handle null values correctly
+    localStorage.setItem('samProLogo', JSON.stringify(companyLogo));
   }, [companyLogo]);
 
   useEffect(() => {
@@ -146,6 +161,28 @@ const App: React.FC = () => {
       sessionStorage.setItem('samProCurrentUser', JSON.stringify(user));
       return true;
     }
+
+    // Check for guest user if admin login fails
+    if (
+        settings.guestCredentials.enabled &&
+        settings.guestCredentials.username === username &&
+        settings.guestCredentials.password === password
+    ) {
+        const guestUser: User = {
+            id: 'guest-user',
+            username: `${username} (زائر)`,
+            password: '', // Do not store password in session
+            permissions: {
+                canAdd: false,
+                canDelete: false,
+                canChangeSettings: false,
+            }
+        };
+        setCurrentUser(guestUser);
+        sessionStorage.setItem('samProCurrentUser', JSON.stringify(guestUser));
+        return true;
+    }
+
     return false;
   };
 
@@ -291,6 +328,19 @@ const App: React.FC = () => {
     const fromQuickEntry = quickEntryData[quickEntryKey] as string[];
     return [...new Set([...fromItems, ...fromQuickEntry])].sort();
   };
+  
+  const handleImportData = (data: BackupData) => {
+    if (data && Array.isArray(data.items) && data.quickEntryData && data.settings) {
+        setItems(data.items);
+        setQuickEntryData(data.quickEntryData);
+        setSettings(data.settings);
+        setCompanyLogo(data.companyLogo);
+        alert('تم استيراد البيانات بنجاح!');
+        setIsSettingsVisible(false); // Close modal on success
+    } else {
+        alert('فشل استيراد البيانات. الملف غير صالح أو تالف.');
+    }
+  };
 
   const uniqueCountries = useMemo(() => getUniqueFilterOptions('country', 'countries'), [items, quickEntryData.countries]);
   const uniqueColors = useMemo(() => getUniqueFilterOptions('color', 'colors'), [items, quickEntryData.colors]);
@@ -416,6 +466,7 @@ const App: React.FC = () => {
             onAddUser={addUser}
             onUpdateUser={updateUser}
             onDeleteUser={deleteUser}
+            onImportData={handleImportData}
         />
       )}
     </div>

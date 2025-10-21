@@ -55,4 +55,16 @@ export interface User {
 export interface AppSettings {
     companyName: string;
     companyInfo: string;
+    guestCredentials: {
+        enabled: boolean;
+        username: string;
+        password: string;
+    };
+}
+
+export interface BackupData {
+  items: Item[];
+  quickEntryData: UniqueData;
+  settings: AppSettings;
+  companyLogo: string | null;
 }
