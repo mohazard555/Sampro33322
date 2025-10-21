@@ -11,31 +11,74 @@ interface ItemsSidebarProps {
 
 const ItemsSidebar: React.FC<ItemsSidebarProps> = ({ isOpen, onClose, items, onSelectItem }) => {
 
-    const exportToCSV = () => {
-        const headers = 'المعرّف,الاسم,الموديل,الباركود,النوع,الفئة,المقاس,اللون,المادة,بلد المنشأ,السعر,الوصف\n';
-        const rows = items.map(item => 
-            [
-                item.id,
-                `"${item.name.replace(/"/g, '""')}"`,
-                `"${item.model.replace(/"/g, '""')}"`,
-                `"${item.barcode}"`,
-                item.type,
-                `"${item.category.replace(/"/g, '""')}"`,
-                item.size,
-                item.color,
-                `"${item.material.replace(/"/g, '""')}"`,
-                item.country,
-                item.price,
-                `"${item.description.replace(/"/g, '""')}"`
-            ].join(',')
-        ).join('\n');
+    const exportToExcel = () => {
+        const headers = [
+            'المعرّف', 'الاسم', 'الموديل', 'الباركود', 'النوع', 'الفئة', 
+            'المقاس', 'اللون', 'المادة', 'بلد المنشأ', 'السعر', 'الوصف'
+        ];
 
-        const csvContent = headers + rows;
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const tableRows = items.map(item => `
+            <tr>
+                <td>${item.id || ''}</td>
+                <td>${item.name || ''}</td>
+                <td>${item.model || ''}</td>
+                <td>${item.barcode || ''}</td>
+                <td>${item.type || ''}</td>
+                <td>${item.category || ''}</td>
+                <td>${item.size || ''}</td>
+                <td>${item.color || ''}</td>
+                <td>${item.material || ''}</td>
+                <td>${item.country || ''}</td>
+                <td>${item.price || 0}</td>
+                <td>${item.description || ''}</td>
+            </tr>
+        `).join('');
+        
+        const table = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Inventory</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                    <x:RightToLeft/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; text-align: right; }
+                    th { background-color: #f2f2f2; font-weight: bold; }
+                    td { mso-number-format:"\@"; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <thead>
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\uFEFF', table], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', 'sam-pro-inventory.csv');
+        link.setAttribute('download', 'sam-pro-inventory.xls');
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -132,9 +175,9 @@ const ItemsSidebar: React.FC<ItemsSidebarProps> = ({ isOpen, onClose, items, onS
                 <PrintIcon />
                 طباعة القائمة
             </button>
-            <button onClick={exportToCSV} className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-500 transition-colors text-sm">
+            <button onClick={exportToExcel} className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-500 transition-colors text-sm">
                 <ExportIcon />
-                تصدير إلى CSV
+                تصدير إلى Excel
             </button>
         </div>
 

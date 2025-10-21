@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Item, Filters, UniqueData, AppSettings, User } from './types';
+import type { Item, Filters, UniqueData, AppSettings, User, ItemType } from './types';
 import { INITIAL_ITEMS } from './constants';
 import Header from './components/Header';
 import HatForm from './components/HatForm';
@@ -286,6 +286,24 @@ const App: React.FC = () => {
     setEditingItem(null);
   };
 
+  const getUniqueFilterOptions = (key: keyof Item, quickEntryKey: keyof UniqueData) => {
+    const fromItems = items.map(item => item[key]).filter(Boolean) as string[];
+    const fromQuickEntry = quickEntryData[quickEntryKey] as string[];
+    return [...new Set([...fromItems, ...fromQuickEntry])].sort();
+  };
+
+  const uniqueCountries = useMemo(() => getUniqueFilterOptions('country', 'countries'), [items, quickEntryData.countries]);
+  const uniqueColors = useMemo(() => getUniqueFilterOptions('color', 'colors'), [items, quickEntryData.colors]);
+  const uniqueMaterials = useMemo(() => getUniqueFilterOptions('material', 'materials'), [items, quickEntryData.materials]);
+  const uniqueCategories = useMemo(() => getUniqueFilterOptions('category', 'categories'), [items, quickEntryData.categories]);
+  const uniqueSizes = useMemo(() => getUniqueFilterOptions('size', 'sizes'), [items, quickEntryData.sizes]);
+  const uniqueTypes = useMemo(() => {
+    const fromItems = items.map(item => item.type).filter(Boolean);
+    const fromQuickEntry = quickEntryData.types;
+    return [...new Set([...fromItems, ...fromQuickEntry])].sort();
+  }, [items, quickEntryData.types]);
+
+
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const searchTermMatch = item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
@@ -300,12 +318,6 @@ const App: React.FC = () => {
       return searchTermMatch && typeMatch && countryMatch && barcodeMatch && categoryMatch && sizeMatch && colorMatch && materialMatch;
     });
   }, [items, filters]);
-  
-  const uniqueCountries = useMemo(() => [...new Set(items.map(item => item.country).filter(Boolean))].sort(), [items]);
-  const uniqueColors = useMemo(() => [...new Set(items.map(item => item.color).filter(Boolean))].sort(), [items]);
-  const uniqueMaterials = useMemo(() => [...new Set(items.map(item => item.material).filter(Boolean))].sort(), [items]);
-  const uniqueCategories = useMemo(() => [...new Set(items.map(item => item.category).filter(Boolean))].sort(), [items]);
-  const uniqueSizes = useMemo(() => [...new Set(items.map(item => item.size).filter(Boolean))].sort(), [items]);
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} companyName={settings.companyName} companyLogo={companyLogo} />;
@@ -363,7 +375,7 @@ const App: React.FC = () => {
             filters={filters} 
             setFilters={setFilters}
             countries={uniqueCountries}
-            types={quickEntryData.types}
+            types={uniqueTypes}
             colors={uniqueColors}
             materials={uniqueMaterials}
             categories={uniqueCategories}
